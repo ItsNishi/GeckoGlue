@@ -24,6 +24,7 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 |-------------|--------|--------------|
 | 🎮 Unity3D | ✅ Working | SSL certs, libxml2, Asset Store links |
 | 🎬 DaVinci Resolve | ✅ Working | GLib mismatch, Intel Arc OpenCL, VA-API |
+| 🖨️ Epson Printers | ✅ Working | Epson Scan 2 crash, IPP setup |
 
 ## 🚀 Quick Start
 
@@ -38,6 +39,7 @@ chmod +x scripts/*.sh
 # Run the fix you need
 sudo ./scripts/fix-unity3d.sh
 sudo ./scripts/fix-davinci-resolve.sh
+sudo ./scripts/fix-epson.sh
 ```
 
 ## 📜 Scripts
@@ -71,12 +73,27 @@ Fixes for DaVinci Resolve with automatic GPU detection:
 - **AMD**: Radeon RX, Vega, Polaris (OpenCL via ROCm/Mesa)
 - **NVIDIA**: GeForce, Quadro, RTX (CUDA via proprietary driver)
 
+### 🖨️ fix-epson.sh
+
+Fixes for Epson all-in-one printers and scanners:
+
+| Fix | Description |
+|-----|-------------|
+| 🔧 Epson Scan 2 | Installs 32-bit Qt5 libraries to fix crash on launch |
+| 🖨️ IPP Printer Setup | Interactive setup for network printing via IPP Everywhere |
+| 👤 Permissions | Adds user to lp group for printer access |
+| 🧪 Test Print | Optional test page to verify setup |
+
+**Tested Models:**
+- Epson XP-5200 (WiFi)
+
 ## 📖 Documentation
 
 Detailed setup guides available in `docs/`:
 
 - 📄 [Unity3D Setup Guide](docs/Unity3D_openSUSE_Setup.md)
 - 📄 [DaVinci Resolve Setup Guide](docs/DaVinci_Resolve_openSUSE_Setup.md)
+- 📄 [Epson Printer/Scanner Setup](docs/Epson_Printer_Scanner_Setup.md)
 
 ## 🔥 Common Issues & Quick Fixes
 
@@ -112,6 +129,24 @@ sudo zypper install rocm-opencl Mesa-libRusticlOpenCL ocl-icd-devel
 **NVIDIA GPU:**
 ```bash
 sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06
+```
+</details>
+
+<details>
+<summary>🖨️ Epson Scan 2: Crashes immediately after opening</summary>
+
+```bash
+sudo zypper install libQt5Widgets5-32bit
+```
+</details>
+
+<details>
+<summary>🖨️ Epson: Add network printer via IPP</summary>
+
+```bash
+sudo lpadmin -p "EPSON_XP5200" -E \
+    -v "ipp://<PRINTER_IP>:631/ipp/print" \
+    -m everywhere -D "Epson XP-5200"
 ```
 </details>
 
