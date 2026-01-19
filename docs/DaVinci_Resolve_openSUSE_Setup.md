@@ -188,6 +188,12 @@ Resolve fails to initialize GPU with this error when OpenCL packages are missing
 **Intel GPU:**
 ```bash
 sudo zypper install intel-opencl ocl-icd-devel
+
+# CRITICAL: Symlink Intel ICD (Tumbleweed installs to wrong location)
+sudo ln -s /usr/share/OpenCL/vendors/intel.icd /etc/OpenCL/vendors/intel.icd
+
+# Verify Intel appears
+clinfo | grep -E "Platform Name|Device Name"
 ```
 
 **AMD GPU:**

@@ -89,6 +89,39 @@ Install_Intel_GPU_Stack()
 		libvulkan_intel vulkan-tools
 
 	Print_Status "Intel GPU stack installed."
+
+	# Fix Intel OpenCL ICD registration
+	# Tumbleweed's intel-opencl installs ICD to /usr/share but loader checks /etc
+	Fix_Intel_OpenCL_ICD
+}
+
+Fix_Intel_OpenCL_ICD()
+{
+	Print_Status "Fixing Intel OpenCL ICD registration..."
+
+	local Intel_ICD_Source="/usr/share/OpenCL/vendors/intel.icd"
+	local ICD_Target_Dir="/etc/OpenCL/vendors"
+	local Intel_ICD_Target="$ICD_Target_Dir/intel.icd"
+
+	mkdir -p "$ICD_Target_Dir"
+
+	if [[ -f "$Intel_ICD_Source" ]]; then
+		if [[ ! -e "$Intel_ICD_Target" ]]; then
+			ln -s "$Intel_ICD_Source" "$Intel_ICD_Target"
+			Print_Status "Symlinked Intel ICD: $Intel_ICD_Source -> $Intel_ICD_Target"
+		else
+			Print_Warning "Intel ICD already exists at $Intel_ICD_Target"
+		fi
+	else
+		Print_Error "Intel ICD source not found at $Intel_ICD_Source"
+		Print_Warning "Ensure intel-opencl package is installed"
+		return 1
+	fi
+
+	# NOTE: Do NOT symlink rusticl.icd - it conflicts with Resolve's GPU detection
+	# on systems with multiple GPUs (e.g., Intel dGPU + AMD iGPU)
+
+	Print_Status "Intel OpenCL ICD fix applied."
 }
 
 Install_AMD_GPU_Stack()
