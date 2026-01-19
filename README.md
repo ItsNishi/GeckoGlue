@@ -52,19 +52,24 @@ Fixes for Unity Hub and Unity Editor:
 | 📚 libxml2 Compatibility | Symlinks `libxml2.so.16` → `libxml2.so.2` |
 | 🛒 Asset Store Protocol | Registers `com.unity3d.kharma://` URI handler |
 | 📦 Dependencies | Installs GTK, X11, and audio libraries |
-| 👤 Permissions | Adds user to video/render groups |
 
 ### 🎬 fix-davinci-resolve.sh
 
-Fixes for DaVinci Resolve (especially Intel Arc GPUs):
+Fixes for DaVinci Resolve with automatic GPU detection:
 
 | Fix | Description |
 |-----|-------------|
+| 🎮 GPU Detection | Automatically detects Intel, AMD, or NVIDIA GPU |
 | 🔧 GLib Mismatch | Moves bundled GLib to use system versions |
-| 🖥️ Intel OpenCL | Installs `intel-compute-runtime`, `intel-opencl`, `ocl-icd-devel` |
+| 🖥️ GPU Drivers | Installs appropriate OpenCL/CUDA runtime for your GPU |
 | 🎥 VA-API | Hardware video decode/encode support |
 | 📦 Dependencies | Installs required Resolve libraries |
 | 👤 Permissions | Adds user to video group, installs udev rules |
+
+**Supported GPUs:**
+- **Intel**: Arc, Iris Xe, UHD Graphics (OpenCL via intel-compute-runtime)
+- **AMD**: Radeon RX, Vega, Polaris (OpenCL via ROCm/Mesa)
+- **NVIDIA**: GeForce, Quadro, RTX (CUDA via proprietary driver)
 
 ## 📖 Documentation
 
@@ -94,8 +99,19 @@ xdg-mime default unityhub.desktop x-scheme-handler/com.unity3d.kharma
 <details>
 <summary>🎬 Resolve: "Unsupported GPU Processing Mode"</summary>
 
+**Intel GPU:**
 ```bash
-sudo zypper install intel-compute-runtime intel-opencl ocl-icd-devel
+sudo zypper install intel-opencl ocl-icd-devel
+```
+
+**AMD GPU:**
+```bash
+sudo zypper install rocm-opencl Mesa-libRusticlOpenCL ocl-icd-devel
+```
+
+**NVIDIA GPU:**
+```bash
+sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06
 ```
 </details>
 
@@ -104,9 +120,10 @@ sudo zypper install intel-compute-runtime intel-opencl ocl-icd-devel
 
 ```bash
 sudo mkdir -p /opt/resolve/libs/disabled
-sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libgmodule-2.0.so* /opt/resolve/libs/disabled/
 sudo mv /opt/resolve/libs/libgobject-2.0.so* /opt/resolve/libs/disabled/
 sudo mv /opt/resolve/libs/libgio-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
 ```
 </details>
 

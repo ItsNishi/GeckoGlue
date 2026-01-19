@@ -1,27 +1,52 @@
 # DaVinci Resolve on openSUSE Tumbleweed
 
-Setup guide for DaVinci Resolve with Intel Arc GPU (Battlemage/Alchemist).
+Setup guide for DaVinci Resolve with automatic GPU detection and driver installation.
 
 ## Prerequisites
 
 - openSUSE Tumbleweed (rolling release)
-- Intel Arc GPU (or NVIDIA with proprietary drivers)
+- Intel Arc, AMD Radeon, or NVIDIA GPU
 - Minimum 16GB RAM recommended
 - SSD storage for cache/scratch
 
-## 1. GPU Driver Setup (Intel Arc)
+## 1. GPU Driver Setup
 
-### Install Intel Media and Compute Stack
+The fix script automatically detects your GPU and installs the appropriate drivers. Manual installation instructions below:
+
+### Intel Arc / UHD Graphics
 
 ```bash
 # Install Intel GPU tools and VA-API
 sudo zypper install intel-gpu-tools libva-utils
 
-# Install Intel Compute Runtime (OpenCL/Level Zero)
-sudo zypper install intel-opencl intel-compute-runtime level-zero-loader
+# Install Intel OpenCL Runtime
+sudo zypper install intel-opencl ocl-icd-devel
 
 # Install Vulkan support
 sudo zypper install libvulkan_intel vulkan-tools
+```
+
+### AMD Radeon
+
+```bash
+# Install AMD GPU tools and VA-API
+sudo zypper install libva-utils
+
+# Install AMD OpenCL Runtime (ROCm + Mesa)
+sudo zypper install rocm-opencl rocm-opencl-devel Mesa-libRusticlOpenCL
+
+# Install Vulkan support
+sudo zypper install libvulkan_radeon vulkan-tools libdrm_amdgpu1
+```
+
+### NVIDIA GeForce / Quadro
+
+```bash
+# Install NVIDIA proprietary driver
+sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06 nvidia-gl-G06
+
+# Install OpenCL support
+sudo zypper install ocl-icd-devel
 ```
 
 ### Verify GPU Detection
@@ -61,14 +86,11 @@ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 ```bash
 # Required libraries
 sudo zypper install libxcb-cursor0 libxcb-damage0 libxcb-util1 \
-    libxkbcommon-x11-0 libapr1 libaprutil1 libglvnd \
+    libxkbcommon-x11-0 libapr1-0 libapr-util1-0 libglvnd \
     libgdk_pixbuf-2_0-0 libfuse2 ocl-icd-devel
 
-# Font rendering
+# Font rendering (required for UI)
 sudo zypper install google-noto-sans-fonts liberation-fonts
-
-# Optional: CUDA support (NVIDIA only)
-# sudo zypper install cuda
 ```
 
 ## 3. Download DaVinci Resolve
@@ -100,12 +122,13 @@ symbol lookup error: /lib64/libgobject-2.0.so.0: undefined symbol: g_dir_unref
 
 ```bash
 sudo mkdir -p /opt/resolve/libs/disabled
-sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libgmodule-2.0.so* /opt/resolve/libs/disabled/
 sudo mv /opt/resolve/libs/libgobject-2.0.so* /opt/resolve/libs/disabled/
 sudo mv /opt/resolve/libs/libgio-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
 ```
 
-Note: `libgmodule-2.0.so*` is not bundled with Resolve, so no action needed for it.
+All four GLib libraries must be moved in the correct order to avoid dependency issues.
 
 **Revert if needed:**
 ```bash
@@ -138,8 +161,10 @@ sudo udevadm control --reload-rules
 ### GPU Selection
 
 1. DaVinci Resolve > Preferences > Memory and GPU
-2. Select your Intel Arc GPU
-3. Set GPU Processing Mode to "OpenCL" (not CUDA for Intel)
+2. Select your GPU from the list
+3. Set GPU Processing Mode:
+   - **Intel/AMD**: OpenCL
+   - **NVIDIA**: CUDA (preferred) or OpenCL
 
 ### Optimize for Intel Arc
 
@@ -160,25 +185,41 @@ sudo udevadm control --reload-rules
 
 Resolve fails to initialize GPU with this error when OpenCL packages are missing or incomplete.
 
+**Intel GPU:**
 ```bash
-# Install Intel OpenCL stack
-sudo zypper install intel-compute-runtime intel-opencl ocl-icd-devel
+sudo zypper install intel-opencl ocl-icd-devel
 ```
 
-Relaunch Resolve after installation. Go to Preferences > Memory and GPU and set GPU Processing Mode to "OpenCL".
+**AMD GPU:**
+```bash
+sudo zypper install rocm-opencl Mesa-libRusticlOpenCL ocl-icd-devel
+```
+
+**NVIDIA GPU:**
+```bash
+sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06
+# Reboot required for driver to load
+```
+
+Relaunch Resolve after installation. Go to Preferences > Memory and GPU and set GPU Processing Mode accordingly.
 
 ### "No OpenCL devices found"
 
 ```bash
-# Verify Intel Compute Runtime
+# Verify OpenCL platforms
 clinfo
 
-# If empty, reinstall:
-sudo zypper install --force intel-compute-runtime intel-opencl ocl-icd-devel
+# If empty, reinstall based on your GPU:
+# Intel:
+sudo zypper install --force intel-opencl ocl-icd-devel
+# AMD:
+sudo zypper install --force rocm-opencl Mesa-libRusticlOpenCL
+# NVIDIA:
+sudo zypper install --force nvidia-compute-G06
 
 # Check ICD files exist
 ls /etc/OpenCL/vendors/
-# Should contain intel.icd or similar
+# Should contain intel.icd, amdocl64.icd, or nvidia.icd
 ```
 
 ### Crash on Startup

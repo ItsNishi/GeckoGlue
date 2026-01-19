@@ -137,38 +137,41 @@ Default install path: `~/Unity/Hub/Editor/<version>/`
 
 ## 5. GPU Configuration
 
-### Intel Arc (Battlemage/Alchemist)
+### Intel Arc / UHD Graphics
 
 ```bash
 # Install Intel GPU stack
 sudo zypper install intel-gpu-tools libva-utils vulkan-tools \
-    intel-opencl intel-compute-runtime level-zero-loader
+    intel-opencl libvulkan_intel
 
 # Verify
 vulkaninfo --summary
 clinfo | head -20
 ```
 
-### NVIDIA
+Note: Unity does not require special group membership (video/render groups). These are only needed for GPU compute applications like DaVinci Resolve.
+
+### NVIDIA GeForce / Quadro
 
 ```bash
-# Add NVIDIA repo and install drivers
-sudo zypper addrepo --refresh \
-    'https://download.nvidia.com/opensuse/tumbleweed' NVIDIA
-sudo zypper install nvidia-video-G06 nvidia-gl-G06
+# Install NVIDIA proprietary drivers
+sudo zypper install nvidia-driver-G06-kmp-default \
+    nvidia-compute-G06 nvidia-gl-G06
 
-# Reboot required
+# Reboot required for driver to load
 ```
 
-### AMD
+### AMD Radeon
 
 ```bash
 # Open source drivers (default in kernel)
-# Install Vulkan support
-sudo zypper install vulkan-radeon libvulkan_radeon
+# Install Vulkan and OpenCL support
+sudo zypper install libvulkan_radeon vulkan-tools \
+    Mesa-libRusticlOpenCL rocm-opencl
 
 # Verify
 vulkaninfo --summary
+clinfo | head -20
 ```
 
 ## 6. Unity Editor Settings

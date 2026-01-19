@@ -110,16 +110,6 @@ EOF
 	Print_Status "Desktop entry configured."
 }
 
-Add_User_To_Groups()
-{
-	Print_Status "Adding user to required groups..."
-
-	usermod -aG video "$SUDO_USER" 2>/dev/null || true
-	usermod -aG render "$SUDO_USER" 2>/dev/null || true
-
-	Print_Status "User added to video and render groups."
-}
-
 Verify_Installation()
 {
 	Print_Status "Verifying fixes..."
@@ -152,7 +142,6 @@ Main()
 	Fix_SSL_Certificates
 	Fix_Libxml2
 	Setup_Desktop_Entry
-	Add_User_To_Groups
 
 	echo ""
 	Verify_Installation

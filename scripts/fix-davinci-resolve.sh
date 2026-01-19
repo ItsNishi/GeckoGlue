@@ -35,13 +35,44 @@ Check_Root()
 	fi
 }
 
+Detect_GPU()
+{
+	Print_Status "Detecting GPU(s)..."
+
+	local GPU_Info
+	GPU_Info=$(lspci | grep -i 'vga\|3d\|display')
+
+	local Detected_GPUs=""
+
+	if echo "$GPU_Info" | grep -iq 'intel'; then
+		Detected_GPUs="${Detected_GPUs}intel "
+		echo "$GPU_Info" | grep -i 'intel'
+	fi
+
+	if echo "$GPU_Info" | grep -iq 'amd\|radeon'; then
+		Detected_GPUs="${Detected_GPUs}amd "
+		echo "$GPU_Info" | grep -i 'amd\|radeon'
+	fi
+
+	if echo "$GPU_Info" | grep -iq 'nvidia'; then
+		Detected_GPUs="${Detected_GPUs}nvidia "
+		echo "$GPU_Info" | grep -i 'nvidia'
+	fi
+
+	if [[ -z "$Detected_GPUs" ]]; then
+		echo "unknown"
+	else
+		echo "$Detected_GPUs" | xargs
+	fi
+}
+
 Install_Dependencies()
 {
 	Print_Status "Installing DaVinci Resolve dependencies..."
 
 	zypper install -y \
 		libxcb-cursor0 libxcb-damage0 libxcb-util1 \
-		libxkbcommon-x11-0 libapr1 libaprutil1 libglvnd \
+		libxkbcommon-x11-0 libapr1-0 libapr-util1-0 libglvnd \
 		libgdk_pixbuf-2_0-0 libfuse2 ocl-icd-devel \
 		google-noto-sans-fonts liberation-fonts
 
@@ -54,10 +85,81 @@ Install_Intel_GPU_Stack()
 
 	zypper install -y \
 		intel-gpu-tools libva-utils \
-		intel-opencl intel-compute-runtime level-zero-loader ocl-icd-devel \
+		intel-opencl ocl-icd-devel \
 		libvulkan_intel vulkan-tools
 
 	Print_Status "Intel GPU stack installed."
+}
+
+Install_AMD_GPU_Stack()
+{
+	Print_Status "Installing AMD GPU compute stack..."
+
+	zypper install -y \
+		libva-utils \
+		rocm-opencl rocm-opencl-devel \
+		Mesa-libRusticlOpenCL libdrm_amdgpu1 \
+		libvulkan_radeon vulkan-tools \
+		ocl-icd-devel
+
+	Print_Status "AMD GPU stack installed."
+}
+
+Install_NVIDIA_GPU_Stack()
+{
+	Print_Status "Installing NVIDIA GPU compute stack..."
+
+	# Check if NVIDIA proprietary driver is already installed
+	if ! command -v nvidia-smi &>/dev/null; then
+		Print_Warning "NVIDIA proprietary driver not detected."
+		Print_Warning "Installing NVIDIA driver..."
+
+		zypper install -y \
+			nvidia-driver-G06-kmp-default \
+			nvidia-compute-G06 \
+			nvidia-gl-G06 \
+			ocl-icd-devel
+
+		Print_Status "NVIDIA driver installed."
+		Print_Warning "You may need to reboot for the driver to load properly."
+	else
+		Print_Status "NVIDIA driver already installed."
+		zypper install -y ocl-icd-devel
+	fi
+
+	Print_Status "NVIDIA GPU stack configured."
+}
+
+Install_GPU_Stack()
+{
+	local GPU_Vendors="$1"
+
+	if [[ "$GPU_Vendors" == "unknown" ]]; then
+		Print_Warning "Could not detect GPU vendor automatically."
+		Print_Warning "Please install GPU drivers manually:"
+		Print_Warning "  Intel: sudo zypper install intel-opencl"
+		Print_Warning "  AMD:   sudo zypper install rocm-opencl Mesa-libRusticlOpenCL"
+		Print_Warning "  NVIDIA: sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06"
+		return
+	fi
+
+	# Handle multiple GPUs - install drivers for all detected vendors
+	for Vendor in $GPU_Vendors; do
+		case "$Vendor" in
+			intel)
+				Print_Status "Installing drivers for Intel GPU..."
+				Install_Intel_GPU_Stack
+				;;
+			amd)
+				Print_Status "Installing drivers for AMD GPU..."
+				Install_AMD_GPU_Stack
+				;;
+			nvidia)
+				Print_Status "Installing drivers for NVIDIA GPU..."
+				Install_NVIDIA_GPU_Stack
+				;;
+		esac
+	done
 }
 
 Fix_GLib_Mismatch()
@@ -75,7 +177,7 @@ Fix_GLib_Mismatch()
 	mkdir -p "$Disabled_Dir"
 
 	# Move bundled GLib libraries to disabled folder
-	for Lib in libglib-2.0.so libgobject-2.0.so libgio-2.0.so; do
+	for Lib in libgmodule-2.0.so libgobject-2.0.so libgio-2.0.so libglib-2.0.so; do
 		if ls "$Resolve_Libs"/${Lib}* 1>/dev/null 2>&1; then
 			mv "$Resolve_Libs"/${Lib}* "$Disabled_Dir/" 2>/dev/null || true
 			Print_Status "Moved $Lib to disabled folder."
@@ -132,17 +234,26 @@ Verify_VA_API()
 {
 	Print_Status "Verifying VA-API (hardware video decode)..."
 
-	echo ""
 	if command -v vainfo &>/dev/null; then
-		vainfo 2>&1 | head -15 || Print_Warning "VA-API check failed"
+		local VA_Output
+		VA_Output=$(vainfo 2>&1)
+
+		if echo "$VA_Output" | grep -q "va_openDriver() returns 0"; then
+			local Driver_Name
+			Driver_Name=$(echo "$VA_Output" | grep "Trying to open" | sed 's/.*\/\([^\/]*\)$/\1/' | head -1)
+			echo "  VA-API driver loaded: $Driver_Name"
+		else
+			Print_Warning "VA-API driver failed to load"
+		fi
 	else
 		Print_Warning "vainfo not found. Install with: zypper install libva-utils"
 	fi
-	echo ""
 }
 
 Print_Post_Install()
 {
+	local GPU_Vendors="$1"
+
 	echo ""
 	echo "========================================"
 	echo " Post-Installation Steps"
@@ -153,11 +264,75 @@ Print_Post_Install()
 	echo ""
 	echo "2. Configure GPU in Resolve:"
 	echo "   - Go to: DaVinci Resolve > Preferences > Memory and GPU"
-	echo "   - Select your Intel Arc GPU"
-	echo "   - Set GPU Processing Mode to: OpenCL (not CUDA)"
-	echo ""
-	echo "3. If you get 'Unsupported GPU Processing Mode' error:"
-	echo "   Run: sudo zypper install intel-compute-runtime intel-opencl ocl-icd-devel"
+
+	# Check if multiple GPUs detected
+	local GPU_Count
+	GPU_Count=$(echo "$GPU_Vendors" | wc -w)
+
+	if [[ $GPU_Count -gt 1 ]]; then
+		echo "   - Multiple GPUs detected! Choose your preferred GPU:"
+		for Vendor in $GPU_Vendors; do
+			case "$Vendor" in
+				intel)
+					echo "     * Intel GPU: Use OpenCL mode"
+					;;
+				amd)
+					echo "     * AMD GPU: Use OpenCL mode"
+					;;
+				nvidia)
+					echo "     * NVIDIA GPU: Use CUDA (preferred) or OpenCL mode"
+					;;
+			esac
+		done
+		echo ""
+		echo "3. Troubleshooting 'Unsupported GPU Processing Mode' errors:"
+		for Vendor in $GPU_Vendors; do
+			case "$Vendor" in
+				intel)
+					echo "   Intel: sudo zypper install intel-opencl"
+					;;
+				amd)
+					echo "   AMD: sudo zypper install rocm-opencl Mesa-libRusticlOpenCL"
+					;;
+				nvidia)
+					echo "   NVIDIA: Check nvidia-smi, reboot if needed"
+					;;
+			esac
+		done
+	else
+		# Single GPU
+		case "$GPU_Vendors" in
+			intel)
+				echo "   - Select your Intel GPU"
+				echo "   - Set GPU Processing Mode to: OpenCL"
+				echo ""
+				echo "3. If you get 'Unsupported GPU Processing Mode' error:"
+				echo "   Run: sudo zypper install intel-opencl ocl-icd-devel"
+				;;
+			amd)
+				echo "   - Select your AMD GPU"
+				echo "   - Set GPU Processing Mode to: OpenCL"
+				echo ""
+				echo "3. If you get 'Unsupported GPU Processing Mode' error:"
+				echo "   Run: sudo zypper install rocm-opencl Mesa-libRusticlOpenCL"
+				;;
+			nvidia)
+				echo "   - Select your NVIDIA GPU"
+				echo "   - Set GPU Processing Mode to: CUDA (preferred) or OpenCL"
+				echo ""
+				echo "3. If you get 'Unsupported GPU Processing Mode' error:"
+				echo "   Ensure NVIDIA driver is loaded: nvidia-smi"
+				echo "   If driver not loaded, reboot the system"
+				;;
+			unknown)
+				echo "   - Select your GPU"
+				echo "   - Set GPU Processing Mode based on your GPU vendor:"
+				echo "     * Intel/AMD: OpenCL"
+				echo "     * NVIDIA: CUDA or OpenCL"
+				;;
+		esac
+	fi
+
 	echo ""
 }
 
@@ -170,8 +345,12 @@ Main()
 
 	Check_Root
 
+	# Detect GPU and install appropriate drivers
+	local GPU_Vendor
+	GPU_Vendor=$(Detect_GPU)
+
 	Install_Dependencies
-	Install_Intel_GPU_Stack
+	Install_GPU_Stack "$GPU_Vendor"
 	Setup_Permissions
 
 	# Only fix GLib if Resolve is installed
@@ -185,7 +364,7 @@ Main()
 	Verify_OpenCL
 	Verify_VA_API
 
-	Print_Post_Install
+	Print_Post_Install "$GPU_Vendor"
 
 	Print_Status "All fixes applied successfully!"
 	Print_Warning "Log out and back in for group changes to take effect."
