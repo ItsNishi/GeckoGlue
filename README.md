@@ -29,7 +29,7 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/GeckoGlue.git
+git clone https://github.com/ItsNishi/GeckoGlue.git
 cd GeckoGlue
 
 # Make scripts executable
