@@ -66,7 +66,7 @@ Fixes for DaVinci Resolve with automatic GPU detection:
 | 🖥️ GPU Drivers | Installs appropriate OpenCL/CUDA runtime for your GPU |
 | 🎥 VA-API | Hardware video decode/encode support |
 | 📦 Dependencies | Installs required Resolve libraries |
-| 👤 Permissions | Adds user to video group, installs udev rules |
+| 👤 Permissions | Installs udev rules for GPU access |
 
 **Supported GPUs:**
 - **Intel**: Arc, Iris Xe, UHD Graphics (OpenCL via intel-compute-runtime)
@@ -133,6 +133,18 @@ sudo zypper install nvidia-driver-G06-kmp-default nvidia-compute-G06
 </details>
 
 <details>
+<summary>🎬 Resolve: Symbol lookup errors (g_once_init_leave_pointer)</summary>
+
+```bash
+sudo mkdir -p /opt/resolve/libs/disabled
+sudo mv /opt/resolve/libs/libgmodule-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libgobject-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libgio-2.0.so* /opt/resolve/libs/disabled/
+sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
+```
+</details>
+
+<details>
 <summary>🖨️ Epson Scan 2: Crashes immediately after opening</summary>
 
 ```bash
@@ -147,18 +159,6 @@ sudo zypper install libQt5Widgets5-32bit
 sudo lpadmin -p "EPSON_XP5200" -E \
     -v "ipp://<PRINTER_IP>:631/ipp/print" \
     -m everywhere -D "Epson XP-5200"
-```
-</details>
-
-<details>
-<summary>🎬 Resolve: Symbol lookup errors (g_once_init_leave_pointer)</summary>
-
-```bash
-sudo mkdir -p /opt/resolve/libs/disabled
-sudo mv /opt/resolve/libs/libgmodule-2.0.so* /opt/resolve/libs/disabled/
-sudo mv /opt/resolve/libs/libgobject-2.0.so* /opt/resolve/libs/disabled/
-sudo mv /opt/resolve/libs/libgio-2.0.so* /opt/resolve/libs/disabled/
-sudo mv /opt/resolve/libs/libglib-2.0.so* /opt/resolve/libs/disabled/
 ```
 </details>
 

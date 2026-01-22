@@ -224,12 +224,6 @@ Setup_Permissions()
 {
 	Print_Status "Setting up permissions..."
 
-	# Add user to video group
-	if [[ -n "$SUDO_USER" ]]; then
-		usermod -aG video "$SUDO_USER"
-		Print_Status "Added $SUDO_USER to video group."
-	fi
-
 	# Copy udev rules if they exist
 	if [[ -d /opt/resolve/share/etc/udev/rules.d ]]; then
 		cp /opt/resolve/share/etc/udev/rules.d/*.rules /etc/udev/rules.d/ 2>/dev/null || true
@@ -400,7 +394,6 @@ Main()
 	Print_Post_Install "$GPU_Vendor"
 
 	Print_Status "All fixes applied successfully!"
-	Print_Warning "Log out and back in for group changes to take effect."
 	echo ""
 }
 
