@@ -81,7 +81,6 @@ Fixes for Epson all-in-one printers and scanners:
 |-----|-------------|
 | 🔧 Epson Scan 2 | Installs 32-bit Qt5 libraries to fix crash on launch |
 | 🖨️ IPP Printer Setup | Interactive setup for network printing via IPP Everywhere |
-| 👤 Permissions | Adds user to lp group for printer access |
 | 🧪 Test Print | Optional test page to verify setup |
 
 **Tested Models:**

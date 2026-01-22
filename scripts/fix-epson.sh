@@ -116,15 +116,6 @@ Setup_IPP_Printer()
 	fi
 }
 
-Add_User_To_Groups()
-{
-	Print_Status "Adding user to printer/scanner groups..."
-
-	if [[ -n "$SUDO_USER" ]]; then
-		usermod -aG lp "$SUDO_USER" 2>/dev/null || true
-		Print_Status "Added $SUDO_USER to lp group."
-	fi
-}
 
 Verify_Installation()
 {
@@ -171,8 +162,6 @@ Print_Test_Instructions()
 	echo "To test scanning:"
 	echo "  epsonscan2"
 	echo ""
-	Print_Warning "Log out and back in for group changes to take effect."
-	echo ""
 }
 
 Main()
@@ -186,7 +175,6 @@ Main()
 
 	Fix_Epson_Scan2
 	Setup_IPP_Printer
-	Add_User_To_Groups
 
 	echo ""
 	Verify_Installation
