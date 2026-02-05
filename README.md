@@ -133,6 +133,50 @@ sudo lpadmin -p "EPSON_XP5200" -E \
 ```
 </details>
 
+<details>
+<summary>🖥️ NVIDIA: Black screen / nouveau issues</summary>
+
+Nouveau may not have been blacklisted properly. Both a modprobe blacklist and a dracut omit are needed:
+
+```bash
+echo "blacklist nouveau" | sudo tee /etc/modprobe.d/50-nvidia-default.conf
+echo 'omit_drivers+=" nouveau "' | sudo tee /etc/dracut.conf.d/50-nvidia.conf
+sudo dracut -f
+```
+
+If the installer itself crashes, add `nomodeset` to the kernel line at the GRUB menu (`e` to edit, `F10` to boot).
+</details>
+
+<details>
+<summary>🖥️ NVIDIA: Screen tearing / Wayland not working</summary>
+
+Enable DRM kernel modesetting:
+
+```bash
+echo "options nvidia-drm modeset=1" | sudo tee /etc/modprobe.d/nvidia-drm.conf
+sudo dracut -f
+```
+</details>
+
+<details>
+<summary>🔧 System Updates: Boot halts with "Missing measure-pcr-prediction file"</summary>
+
+Remove the package and clean `/etc/crypttab`:
+
+```bash
+sudo sed -i 's/tpm2-measure-pcr=yes,//g; s/,tpm2-measure-pcr=yes//g; s/tpm2-measure-pcr=yes//g' /etc/crypttab
+sudo zypper rm sdbootutil-dracut-measure-pcr
+sudo zypper al sdbootutil-dracut-measure-pcr
+sudo dracut -f
+```
+
+On BLS GRUB systems (`grub2-x86_64-efi-bls`), `dracut -f` alone is not enough. You must also rebuild the EFI initrd:
+
+```bash
+sudo kernel-install add $(uname -r) /usr/lib/modules/$(uname -r)/vmlinuz
+```
+</details>
+
 ## 🤝 Contributing
 
 This is a community effort! Here's how you can help:
