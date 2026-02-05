@@ -48,25 +48,13 @@ sudo ./scripts/fix-measure-pcr.sh
 
 ## 📜 Scripts
 
-### 🎮 fix-unity3d.sh
-
-Fixes SSL certs, libxml2 compatibility, Asset Store protocol handler, and dependencies for Unity Hub/Editor.
-
-### 🎬 fix-davinci-resolve.sh
-
-Fixes GLib mismatch, GPU drivers (OpenCL/CUDA), VA-API, and permissions for DaVinci Resolve. Auto-detects Intel, AMD, and NVIDIA GPUs.
-
-### 🖨️ fix-epson.sh
-
-Fixes Epson Scan 2 crash (32-bit Qt5) and sets up IPP network printing. Tested with XP-5200.
-
-### 🖥️ fix-nvidia.sh
-
-Installs open-source signed NVIDIA drivers (G05/G06/G07) with Secure Boot support, nouveau blacklisting, and optional PRIME hybrid graphics.
-
-### 🔧 fix-measure-pcr.sh
-
-Fixes boot halt from missing TPM2 PCR predictions on GRUB + LUKS systems. Removes the `sdbootutil-dracut-measure-pcr` package, cleans `/etc/crypttab`, rebuilds initrd, and lets you manage old kernels on the EFI partition. Handles both traditional GRUB and BLS.
+| Script | What It Fixes |
+|--------|---------------|
+| 🎮 `fix-unity3d.sh` | SSL certs, libxml2 compat, Asset Store protocol, dependencies |
+| 🎬 `fix-davinci-resolve.sh` | GLib mismatch, GPU drivers (Intel/AMD/NVIDIA), OpenCL, VA-API |
+| 🖨️ `fix-epson.sh` | Epson Scan 2 crash (32-bit Qt5), IPP network printing |
+| 🖥️ `fix-nvidia.sh` | Open-source signed drivers (G05/G06/G07), Secure Boot, PRIME |
+| 🔧 `fix-measure-pcr.sh` | Boot halt from missing PCR predictions on GRUB + LUKS, EFI kernel management |
 
 ## 📖 Documentation
 

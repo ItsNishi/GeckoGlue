@@ -86,10 +86,27 @@ Check_Secure_Boot()
 	fi
 }
 
+Add_NVIDIA_Repo()
+{
+	Print_Status "Checking NVIDIA repository..."
+
+	if zypper lr -u 2>/dev/null | grep -q "download.nvidia.com"; then
+		Print_Warning "NVIDIA repository already added."
+	else
+		zypper addrepo --refresh \
+			https://download.nvidia.com/opensuse/tumbleweed \
+			NVIDIA
+		Print_Status "NVIDIA repository added."
+	fi
+
+	zypper ref
+}
+
 Install_Driver()
 {
 	Print_Status "Installing NVIDIA open driver ($Driver_Series)..."
 
+	# Kernel module (from Oss repo)
 	local Kmp_Pkg="nvidia-open-driver-${Driver_Series}-signed-kmp-default"
 
 	if rpm -q "$Kmp_Pkg" &>/dev/null; then
@@ -99,26 +116,40 @@ Install_Driver()
 		Print_Status "Kernel module installed."
 	fi
 
-	# Install nvidia-settings
-	if rpm -q nvidia-settings &>/dev/null; then
-		Print_Warning "nvidia-settings already installed."
-	else
-		zypper install -y nvidia-settings
-		Print_Status "nvidia-settings installed."
-	fi
+	# Userspace packages (from NVIDIA repo)
+	local Video_Pkg="nvidia-video-${Driver_Series}"
+	local Compute_Pkg="nvidia-compute-utils-${Driver_Series}"
+
+	for Pkg in "$Video_Pkg" "$Compute_Pkg" nvidia-settings; do
+		if rpm -q "$Pkg" &>/dev/null; then
+			Print_Warning "$Pkg already installed."
+		else
+			zypper install -y "$Pkg"
+			Print_Status "$Pkg installed."
+		fi
+	done
 }
 
 Blacklist_Nouveau()
 {
 	Print_Status "Checking nouveau blacklist..."
 
-	Conf="/etc/modprobe.d/50-nvidia-default.conf"
-
-	if [[ -f "$Conf" ]] && grep -q "blacklist nouveau" "$Conf"; then
-		Print_Warning "Nouveau already blacklisted."
+	# Modprobe blacklist
+	local Modprobe_Conf="/etc/modprobe.d/50-nvidia-default.conf"
+	if [[ -f "$Modprobe_Conf" ]] && grep -q "blacklist nouveau" "$Modprobe_Conf"; then
+		Print_Warning "Nouveau already blacklisted in modprobe."
 	else
-		echo "blacklist nouveau" > "$Conf"
-		Print_Status "Nouveau blacklisted."
+		echo "blacklist nouveau" > "$Modprobe_Conf"
+		Print_Status "Nouveau blacklisted in modprobe."
+	fi
+
+	# Dracut omit to prevent nouveau from being included in the initrd
+	local Dracut_Conf="/etc/dracut.conf.d/50-nvidia.conf"
+	if [[ -f "$Dracut_Conf" ]] && grep -q 'omit_drivers.*nouveau' "$Dracut_Conf"; then
+		Print_Warning "Nouveau already omitted from dracut."
+	else
+		echo 'omit_drivers+=" nouveau "' > "$Dracut_Conf"
+		Print_Status "Nouveau omitted from dracut."
 	fi
 }
 
@@ -192,6 +223,7 @@ Main()
 	Detect_GPU
 	Detect_Driver_Series
 	Check_Secure_Boot
+	Add_NVIDIA_Repo
 	Install_Driver
 	Blacklist_Nouveau
 	Setup_Hybrid_Graphics

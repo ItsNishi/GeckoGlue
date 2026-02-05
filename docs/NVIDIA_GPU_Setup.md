@@ -18,14 +18,23 @@ Setup guide for NVIDIA GPUs on Tumbleweed laptops and desktops, including driver
 
 ## 1. Driver Installation
 
-Drivers are in the main openSUSE Oss repository. No additional repos needed.
+The kernel module is in the openSUSE Oss repository. Userspace packages (`nvidia-smi`, OpenGL/Vulkan libs) require the NVIDIA repo.
+
+### Add NVIDIA Repository
+
+```bash
+sudo zypper addrepo --refresh https://download.nvidia.com/opensuse/tumbleweed NVIDIA
+sudo zypper ref
+```
+
+### Install Packages
 
 ```bash
 # Modern GPUs (GTX 10xx, 16xx, RTX 20xx/30xx/40xx)
-sudo zypper install nvidia-open-driver-G06-signed-kmp-default nvidia-settings
+sudo zypper install nvidia-open-driver-G06-signed-kmp-default nvidia-video-G06 nvidia-compute-utils-G06 nvidia-settings
 
 # Newest GPUs (RTX 50xx)
-sudo zypper install nvidia-open-driver-G07-signed-kmp-default nvidia-settings
+sudo zypper install nvidia-open-driver-G07-signed-kmp-default nvidia-video-G07 nvidia-compute-utils-G07 nvidia-settings
 ```
 
 Reboot after installation.
@@ -79,12 +88,14 @@ Should be automatic, but verify:
 
 ```bash
 cat /etc/modprobe.d/50-nvidia-default.conf
+cat /etc/dracut.conf.d/50-nvidia.conf
 ```
 
-If missing, create it:
+If missing, create both (modprobe blacklist alone is not enough - nouveau must also be omitted from the initrd):
 
 ```bash
 echo "blacklist nouveau" | sudo tee /etc/modprobe.d/50-nvidia-default.conf
+echo 'omit_drivers+=" nouveau "' | sudo tee /etc/dracut.conf.d/50-nvidia.conf
 sudo dracut -f
 ```
 
@@ -137,11 +148,12 @@ sudo dracut -f
 
 ## Package Reference
 
-| Package | Purpose |
-|---------|---------|
-| `nvidia-open-driver-G06-signed-kmp-default` | Open-source signed kernel driver (GTX 10xx+, RTX) |
-| `nvidia-open-driver-G07-signed-kmp-default` | Open-source signed kernel driver (RTX 50xx) |
-| `nvidia-open-driver-G05-signed-kmp-default` | Open-source signed kernel driver (GTX 600-900) |
-| `nvidia-settings` | NVIDIA settings GUI |
-| `nvidia-compute-G06` | CUDA runtime |
-| `suse-prime` | Hybrid graphics switching |
+| Package | Repo | Purpose |
+|---------|------|---------|
+| `nvidia-open-driver-G06-signed-kmp-default` | Oss | Open-source signed kernel driver (GTX 10xx+, RTX) |
+| `nvidia-open-driver-G07-signed-kmp-default` | Oss | Open-source signed kernel driver (RTX 50xx) |
+| `nvidia-open-driver-G05-signed-kmp-default` | Oss | Open-source signed kernel driver (GTX 600-900) |
+| `nvidia-video-G06` | NVIDIA | Userspace libs, `nvidia-smi`, OpenGL/Vulkan |
+| `nvidia-compute-utils-G06` | NVIDIA | CUDA runtime and compute utilities |
+| `nvidia-settings` | Oss | NVIDIA settings GUI |
+| `suse-prime` | Oss | Hybrid graphics switching |
