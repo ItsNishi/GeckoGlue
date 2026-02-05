@@ -147,13 +147,88 @@ Check_Kernel_Cmdline()
 
 Clean_EFI_Stale_Entries()
 {
-	Print_Status "Cleaning stale BLS entries from EFI partition..."
+	Print_Status "Checking EFI partition..."
 
-	# Remove snapper entries that reference old initrds by hash
+	local EFI_TW_Dir="/boot/efi/opensuse-tumbleweed"
+
+	# Remove old hashed initrds from current kernel's EFI dir
+	local EFI_Dir="${EFI_TW_Dir}/${KVER}"
+	if [[ -d "$EFI_Dir" ]]; then
+		local Old_Initrds
+		Old_Initrds=$(find "$EFI_Dir" -name "initrd-*" 2>/dev/null)
+		if [[ -n "$Old_Initrds" ]]; then
+			Print_Status "Removing old hashed initrds from current kernel dir..."
+			rm -f "$EFI_Dir"/initrd-*
+			Print_Status "Old initrds removed."
+		fi
+	fi
+
+	# Collect old kernel versions on EFI
+	local -a Old_Kvers=()
+	for Dir in "${EFI_TW_Dir}"/*/; do
+		[[ -d "$Dir" ]] || continue
+		local Dir_Ver
+		Dir_Ver=$(basename "$Dir")
+		[[ "$Dir_Ver" == "$KVER" ]] && continue
+		Old_Kvers+=("$Dir_Ver")
+	done
+
+	# Show kernel inventory and let user manage cleanup
+	echo ""
+	Print_Status "EFI partition usage:"
+	df -h /boot/efi | tail -1
+	echo ""
+	Print_Status "Running kernel: $KVER"
+
+	if [[ ${#Old_Kvers[@]} -gt 0 ]]; then
+		# Sort newest first for display
+		local -a Sorted_Kvers
+		mapfile -t Sorted_Kvers < <(printf '%s\n' "${Old_Kvers[@]}" | sort -rV)
+
+		Print_Warning "Found ${#Old_Kvers[@]} old kernel(s) on EFI partition:"
+		for ((i = 0; i < ${#Sorted_Kvers[@]}; i++)); do
+			local Size
+			Size=$(du -sh "${EFI_TW_Dir}/${Sorted_Kvers[$i]}" 2>/dev/null | awk '{print $1}')
+			echo "  $((i + 1)). ${Sorted_Kvers[$i]}  (${Size})"
+		done
+
+		echo ""
+		Print_Warning "Each kernel takes ~150MB. A 600MB EFI partition fits ~3 total."
+		echo ""
+		echo "Options:"
+		echo "  [enter]  Keep all old kernels"
+		echo "  [N]      Keep N most recent old kernels (remove the rest)"
+		echo "  [0]      Remove all old kernels"
+		echo ""
+		read -p "How many old kernels to keep? [all]: " Keep_Input
+
+		if [[ -z "$Keep_Input" ]]; then
+			Print_Status "Keeping all old kernels."
+		else
+			if ! [[ "$Keep_Input" =~ ^[0-9]+$ ]]; then
+				Print_Warning "Invalid input, keeping all old kernels."
+			elif [[ $Keep_Input -ge ${#Sorted_Kvers[@]} ]]; then
+				Print_Status "Keeping all ${#Sorted_Kvers[@]} old kernel(s)."
+			else
+				# Sorted_Kvers is newest-first, so remove from the end
+				local Remove_Start=$Keep_Input
+				for ((i = Remove_Start; i < ${#Sorted_Kvers[@]}; i++)); do
+					Print_Warning "Removing kernel ${Sorted_Kvers[$i]} from EFI..."
+					rm -rf "${EFI_TW_Dir}/${Sorted_Kvers[$i]}"
+				done
+				local Removed=$(( ${#Sorted_Kvers[@]} - Keep_Input ))
+				Print_Status "Removed $Removed old kernel(s), kept $Keep_Input."
+			fi
+		fi
+	else
+		Print_Status "No old kernels on EFI partition."
+	fi
+
+	# Remove stale BLS entries that reference initrds no longer on EFI
+	echo ""
 	local Stale_Count=0
 	for Entry in /boot/efi/loader/entries/snapper-*.conf /boot/efi/loader/entries/system-*.conf; do
 		if [[ -f "$Entry" ]]; then
-			# Check if the initrd this entry references still exists
 			local Initrd_Path
 			Initrd_Path=$(grep '^initrd' "$Entry" | awk '{print $2}')
 			if [[ -n "$Initrd_Path" ]] && [[ ! -f "/boot/efi${Initrd_Path}" ]]; then
@@ -165,33 +240,12 @@ Clean_EFI_Stale_Entries()
 	done
 
 	if [[ $Stale_Count -eq 0 ]]; then
-		Print_Warning "No stale entries found."
+		Print_Status "No stale BLS entries found."
 	else
-		Print_Status "Removed $Stale_Count stale entries."
+		Print_Status "Removed $Stale_Count stale BLS entries."
 	fi
 
-	# Remove old hashed initrds from EFI to free space
-	local EFI_Dir="/boot/efi/opensuse-tumbleweed/${KVER}"
-	if [[ -d "$EFI_Dir" ]]; then
-		local Old_Initrds
-		Old_Initrds=$(find "$EFI_Dir" -name "initrd-*" 2>/dev/null)
-		if [[ -n "$Old_Initrds" ]]; then
-			Print_Status "Removing old hashed initrds from EFI..."
-			rm -f "$EFI_Dir"/initrd-*
-			Print_Status "Old initrds removed."
-		fi
-	fi
-
-	# Remove old kernel versions from EFI
-	for Dir in /boot/efi/opensuse-tumbleweed/*/; do
-		local Dir_Ver
-		Dir_Ver=$(basename "$Dir")
-		if [[ "$Dir_Ver" != "$KVER" ]] && [[ -d "$Dir" ]]; then
-			Print_Warning "Removing old kernel $Dir_Ver from EFI..."
-			rm -rf "$Dir"
-		fi
-	done
-
+	echo ""
 	Print_Status "EFI space after cleanup:"
 	df -h /boot/efi | tail -1
 }

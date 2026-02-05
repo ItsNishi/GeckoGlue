@@ -67,17 +67,25 @@ sudo zypper al sdbootutil-dracut-measure-pcr
 # 3. Rebuild /boot initrd
 sudo dracut -f
 
-# 4. Clean up stale snapper BLS entries that reference old initrds
-#    List entries first to review them
-sudo ls -la /boot/efi/loader/entries/
+# 4. Review old kernels on EFI partition
+#    Each kernel takes ~150MB. A 600MB EFI partition fits ~3 total.
+ls -d /boot/efi/opensuse-tumbleweed/*/
+du -sh /boot/efi/opensuse-tumbleweed/*/
+df -h /boot/efi
 
-#    Remove snapper and system entries (they reference old initrds)
-sudo sh -c 'rm -f /boot/efi/loader/entries/snapper-*.conf'
-sudo sh -c 'rm -f /boot/efi/loader/entries/system-*.conf'
-
-#    Remove old initrds from EFI partition to free space
+#    Remove old hashed initrds from current kernel dir
 KVER=$(uname -r)
 sudo sh -c "rm -f /boot/efi/opensuse-tumbleweed/${KVER}/initrd-*"
+
+#    Optionally remove old kernel versions to free space (keep at least 1 for rollback)
+#    sudo rm -rf /boot/efi/opensuse-tumbleweed/<old-version>
+
+#    Remove stale BLS entries that reference removed kernels
+sudo sh -c 'for f in /boot/efi/loader/entries/snapper-*.conf /boot/efi/loader/entries/system-*.conf; do
+    [ -f "$f" ] || continue
+    initrd=$(grep "^initrd" "$f" | awk "{print \$2}")
+    [ -n "$initrd" ] && [ ! -f "/boot/efi${initrd}" ] && rm -f "$f" && echo "Removed: $(basename "$f")"
+done'
 
 # 5. Verify /etc/kernel/cmdline has root= parameter
 #    If missing, the BLS entry will fail to boot
@@ -164,8 +172,8 @@ bootctl list 2>/dev/null && echo "sd-boot"
 
 - **`dracut -f` only rebuilds `/boot/initrd-*`** on BLS systems. The bootloader loads from the EFI partition, so this alone won't fix the issue.
 - **Missing `root=` in `/etc/kernel/cmdline`** causes `gpt-auto-root` failures. Always verify this file contains the full `root=/dev/mapper/<name>` and `rootflags=` parameters before running `kernel-install`.
-- **EFI partition can fill up** with multiple initrds (~150MB each). A 600MB EFI partition can only hold ~3 initrds. Clean old kernels before rebuilding.
-- **Deleting old initrds breaks snapper entries** that reference them by hash. Remove the corresponding BLS entries too.
+- **EFI partition can fill up** with multiple initrds (~150MB each). A 600MB EFI partition can only hold ~3 total. Check usage with `df -h /boot/efi` and `du -sh /boot/efi/opensuse-tumbleweed/*/` before rebuilding. Keep at least 1 old kernel for rollback.
+- **Deleting old kernels breaks snapper entries** that reference them by hash. Remove the corresponding BLS entries too. The script handles this automatically after you choose which kernels to remove.
 
 ## Package Reference
 

@@ -26,7 +26,7 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 | 🎬 DaVinci Resolve | ✅ Working | GLib mismatch, Intel Arc OpenCL, VA-API |
 | 🖨️ Epson Printers | ✅ Working | Epson Scan 2 crash, IPP setup |
 | 🖥️ NVIDIA GPU | ✅ Working | Driver install, hybrid graphics, secure boot |
-| 🔧 System Updates | ✅ Fixed | Missing measure-pcr-prediction with SELinux + GRUB |
+| 🔧 System Updates | ✅ Fixed | Missing measure-pcr-prediction with LUKS + GRUB |
 
 ## 🚀 Quick Start
 
@@ -50,73 +50,23 @@ sudo ./scripts/fix-measure-pcr.sh
 
 ### 🎮 fix-unity3d.sh
 
-Fixes for Unity Hub and Unity Editor:
-
-| Fix | Description |
-|-----|-------------|
-| 🔐 SSL Certificate Path | Symlinks `/etc/ssl/ca-bundle.pem` → `/etc/ssl/certs/ca-certificates.crt` |
-| 📚 libxml2 Compatibility | Symlinks `libxml2.so.16` → `libxml2.so.2` |
-| 🛒 Asset Store Protocol | Registers `com.unity3d.kharma://` URI handler |
-| 📦 Dependencies | Installs GTK, X11, and audio libraries |
+Fixes SSL certs, libxml2 compatibility, Asset Store protocol handler, and dependencies for Unity Hub/Editor.
 
 ### 🎬 fix-davinci-resolve.sh
 
-Fixes for DaVinci Resolve with automatic GPU detection:
-
-| Fix | Description |
-|-----|-------------|
-| 🎮 GPU Detection | Automatically detects Intel, AMD, or NVIDIA GPU |
-| 🔧 GLib Mismatch | Moves bundled GLib to use system versions |
-| 🖥️ GPU Drivers | Installs appropriate OpenCL/CUDA runtime for your GPU |
-| 🎥 VA-API | Hardware video decode/encode support |
-| 📦 Dependencies | Installs required Resolve libraries |
-| 👤 Permissions | Installs udev rules for GPU access |
-
-**Supported GPUs:**
-- **Intel**: Arc, Iris Xe, UHD Graphics (OpenCL via intel-compute-runtime)
-- **AMD**: Radeon RX, Vega, Polaris (OpenCL via ROCm/Mesa)
-- **NVIDIA**: GeForce, Quadro, RTX (CUDA via proprietary driver)
+Fixes GLib mismatch, GPU drivers (OpenCL/CUDA), VA-API, and permissions for DaVinci Resolve. Auto-detects Intel, AMD, and NVIDIA GPUs.
 
 ### 🖨️ fix-epson.sh
 
-Fixes for Epson all-in-one printers and scanners:
-
-| Fix | Description |
-|-----|-------------|
-| 🔧 Epson Scan 2 | Installs 32-bit Qt5 libraries to fix crash on launch |
-| 🖨️ IPP Printer Setup | Interactive setup for network printing via IPP Everywhere |
-| 🧪 Test Print | Optional test page to verify setup |
-
-**Tested Models:**
-- Epson XP-5200 (WiFi)
+Fixes Epson Scan 2 crash (32-bit Qt5) and sets up IPP network printing. Tested with XP-5200.
 
 ### 🖥️ fix-nvidia.sh
 
-NVIDIA GPU driver installation with hybrid graphics support:
-
-| Fix | Description |
-|-----|-------------|
-| 🔍 GPU Detection | Auto-detects NVIDIA GPU and selects driver series (G05/G06) |
-| 🔒 Secure Boot Check | Warns if Secure Boot is enabled |
-| 📦 Hardware Repo | Adds openSUSE hardware repository |
-| 🖥️ Driver Install | Installs NVIDIA driver and OpenGL libraries |
-| 🚫 Nouveau Blacklist | Blacklists nouveau to prevent conflicts |
-| 💻 Hybrid Graphics | Optional PRIME setup for laptops |
-
-**Supported GPUs:**
-- **G06**: GTX 10xx, 16xx, RTX 20xx/30xx/40xx/50xx
-- **G05**: GTX 600-900 series
+Installs open-source signed NVIDIA drivers (G05/G06/G07) with Secure Boot support, nouveau blacklisting, and optional PRIME hybrid graphics.
 
 ### 🔧 fix-measure-pcr.sh
 
-Fixes missing measure-pcr-prediction error during updates:
-
-| Fix | Description |
-|-----|-------------|
-| 🔍 Bootloader Detection | Verifies GRUB is in use (aborts on sd-boot) |
-| 🗑️ Package Removal | Removes `sdbootutil-dracut-measure-pcr` |
-
-**Applies to:** GRUB users with SELinux encountering update failures.
+Fixes boot halt from missing TPM2 PCR predictions on GRUB + LUKS systems. Removes the `sdbootutil-dracut-measure-pcr` package, cleans `/etc/crypttab`, rebuilds initrd, and lets you manage old kernels on the EFI partition. Handles both traditional GRUB and BLS.
 
 ## 📖 Documentation
 
