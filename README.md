@@ -26,7 +26,7 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 | 🎬 DaVinci Resolve | ✅ Working | GLib mismatch, Intel Arc OpenCL, VA-API |
 | 🖨️ Epson Printers | ✅ Working | Epson Scan 2 crash, IPP setup |
 | 🖥️ NVIDIA GPU | ✅ Working | Driver install, hybrid graphics, secure boot |
-| 🔧 System Updates | ✅ Fixed | Missing measure-pcr-prediction with LUKS + GRUB |
+| 🔧 System Updates | ✅ Working | Missing measure-pcr-prediction with LUKS + GRUB |
 
 ## 🚀 Quick Start
 
