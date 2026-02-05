@@ -25,6 +25,8 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 | 🎮 Unity3D | ✅ Working | SSL certs, libxml2, Asset Store links |
 | 🎬 DaVinci Resolve | ✅ Working | GLib mismatch, Intel Arc OpenCL, VA-API |
 | 🖨️ Epson Printers | ✅ Working | Epson Scan 2 crash, IPP setup |
+| 🖥️ NVIDIA GPU | ✅ Working | Driver install, hybrid graphics, secure boot |
+| 🔧 System Updates | ✅ Fixed | Missing measure-pcr-prediction with SELinux + GRUB |
 
 ## 🚀 Quick Start
 
@@ -40,6 +42,8 @@ chmod +x scripts/*.sh
 sudo ./scripts/fix-unity3d.sh
 sudo ./scripts/fix-davinci-resolve.sh
 sudo ./scripts/fix-epson.sh
+sudo ./scripts/fix-nvidia.sh
+sudo ./scripts/fix-measure-pcr.sh
 ```
 
 ## 📜 Scripts
@@ -86,6 +90,34 @@ Fixes for Epson all-in-one printers and scanners:
 **Tested Models:**
 - Epson XP-5200 (WiFi)
 
+### 🖥️ fix-nvidia.sh
+
+NVIDIA GPU driver installation with hybrid graphics support:
+
+| Fix | Description |
+|-----|-------------|
+| 🔍 GPU Detection | Auto-detects NVIDIA GPU and selects driver series (G05/G06) |
+| 🔒 Secure Boot Check | Warns if Secure Boot is enabled |
+| 📦 Hardware Repo | Adds openSUSE hardware repository |
+| 🖥️ Driver Install | Installs NVIDIA driver and OpenGL libraries |
+| 🚫 Nouveau Blacklist | Blacklists nouveau to prevent conflicts |
+| 💻 Hybrid Graphics | Optional PRIME setup for laptops |
+
+**Supported GPUs:**
+- **G06**: GTX 10xx, 16xx, RTX 20xx/30xx/40xx/50xx
+- **G05**: GTX 600-900 series
+
+### 🔧 fix-measure-pcr.sh
+
+Fixes missing measure-pcr-prediction error during updates:
+
+| Fix | Description |
+|-----|-------------|
+| 🔍 Bootloader Detection | Verifies GRUB is in use (aborts on sd-boot) |
+| 🗑️ Package Removal | Removes `sdbootutil-dracut-measure-pcr` |
+
+**Applies to:** GRUB users with SELinux encountering update failures.
+
 ## 📖 Documentation
 
 Detailed setup guides available in `docs/`:
@@ -93,6 +125,8 @@ Detailed setup guides available in `docs/`:
 - 📄 [Unity3D Setup Guide](docs/Unity3D_openSUSE_Setup.md)
 - 📄 [DaVinci Resolve Setup Guide](docs/DaVinci_Resolve_openSUSE_Setup.md)
 - 📄 [Epson Printer/Scanner Setup](docs/Epson_Printer_Scanner_Setup.md)
+- 📄 [NVIDIA GPU Setup](docs/NVIDIA_GPU_Setup.md)
+- 📄 [Fix: Missing measure-pcr-prediction](docs/Missing_Measure_PCR_Prediction.md)
 
 ## 🔥 Common Issues & Quick Fixes
 
