@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # NVIDIA GPU Fix Script for openSUSE Tumbleweed
-# Installs drivers from the hardware repo with hybrid graphics support
+# Installs open-source signed NVIDIA drivers with hybrid graphics support
 #
 
 set -e
@@ -52,18 +52,22 @@ Detect_GPU()
 
 Detect_Driver_Series()
 {
-	# Determine G05 vs G06 based on GPU generation
-	# G06: GTX 10xx, 16xx, RTX 20xx/30xx/40xx/50xx (Turing+)
+	# Determine driver series based on GPU generation
+	# G07: RTX 50xx (Blackwell+)
+	# G06: GTX 10xx, 16xx, RTX 20xx/30xx/40xx (Turing+)
 	# G05: GTX 600-900 series (Kepler/Maxwell)
-	if echo "$GPU_Info" | grep -qiE 'RTX|GTX 1[0-9]{3}|GTX 16[0-9]{2}'; then
+	if echo "$GPU_Info" | grep -qiE 'RTX 5[0-9]{3}'; then
+		Driver_Series="G07"
+	elif echo "$GPU_Info" | grep -qiE 'RTX|GTX 1[0-9]{3}|GTX 16[0-9]{2}'; then
 		Driver_Series="G06"
 	else
 		Print_Warning "Could not auto-detect driver series from GPU info."
 		echo ""
-		echo "  G06 - Modern GPUs (GTX 10xx, 16xx, RTX series)"
+		echo "  G07 - Newest GPUs (RTX 50xx)"
+		echo "  G06 - Modern GPUs (GTX 10xx, 16xx, RTX 20xx/30xx/40xx)"
 		echo "  G05 - Older GPUs (GTX 600-900 series)"
 		echo ""
-		read -p "Which driver series? (G06/G05): " Driver_Series
+		read -p "Which driver series? (G07/G06/G05): " Driver_Series
 		Driver_Series="${Driver_Series:-G06}"
 	fi
 
@@ -75,44 +79,33 @@ Check_Secure_Boot()
 	if command -v mokutil &>/dev/null; then
 		SB_State=$(mokutil --sb-state 2>/dev/null || true)
 		if echo "$SB_State" | grep -qi "enabled"; then
-			Print_Warning "Secure Boot is ENABLED."
-			Print_Warning "NVIDIA drivers are unsigned on openSUSE and will not load."
-			Print_Warning "Disable Secure Boot in BIOS/UEFI before rebooting."
+			Print_Status "Secure Boot is ENABLED."
+			Print_Status "Using signed open-source NVIDIA drivers (compatible with Secure Boot)."
 			echo ""
 		fi
 	fi
 }
 
-Add_Hardware_Repo()
-{
-	Print_Status "Checking hardware repository..."
-
-	if zypper lr -u 2>/dev/null | grep -q "download.opensuse.org/repositories/hardware"; then
-		Print_Warning "Hardware repository already added, skipping."
-	else
-		zypper addrepo --refresh \
-			https://download.opensuse.org/repositories/hardware/openSUSE_Tumbleweed/ \
-			hardware
-		Print_Status "Hardware repository added."
-	fi
-
-	zypper ref
-}
-
 Install_Driver()
 {
-	Print_Status "Installing NVIDIA driver ($Driver_Series)..."
+	Print_Status "Installing NVIDIA open driver ($Driver_Series)..."
 
-	Packages="nvidia-driver-${Driver_Series} nvidia-gl-${Driver_Series}"
+	local Kmp_Pkg="nvidia-open-driver-${Driver_Series}-signed-kmp-default"
 
-	for Pkg in $Packages; do
-		if rpm -q "$Pkg" &>/dev/null; then
-			Print_Warning "$Pkg already installed."
-		fi
-	done
+	if rpm -q "$Kmp_Pkg" &>/dev/null; then
+		Print_Warning "$Kmp_Pkg already installed."
+	else
+		zypper install -y "$Kmp_Pkg"
+		Print_Status "Kernel module installed."
+	fi
 
-	zypper install -y $Packages
-	Print_Status "NVIDIA driver packages installed."
+	# Install nvidia-settings
+	if rpm -q nvidia-settings &>/dev/null; then
+		Print_Warning "nvidia-settings already installed."
+	else
+		zypper install -y nvidia-settings
+		Print_Status "nvidia-settings installed."
+	fi
 }
 
 Blacklist_Nouveau()
@@ -137,15 +130,15 @@ Setup_Hybrid_Graphics()
 	if [[ "$Is_Hybrid" =~ ^[Yy]$ ]]; then
 		Print_Status "Installing PRIME support..."
 
-		if rpm -q nvidia-prime &>/dev/null; then
-			Print_Warning "nvidia-prime already installed."
+		if rpm -q suse-prime &>/dev/null; then
+			Print_Warning "suse-prime already installed."
 		else
-			zypper install -y nvidia-prime
-			Print_Status "nvidia-prime installed."
+			zypper install -y suse-prime
+			Print_Status "suse-prime installed."
 		fi
 
 		echo ""
-		Print_Status "Run GPU-intensive apps with: prime-run <application>"
+		Print_Status "Use 'sudo prime-select nvidia' or 'sudo prime-select intel' to switch GPUs."
 	fi
 }
 
@@ -154,6 +147,19 @@ Rebuild_Initrd()
 	Print_Status "Rebuilding initrd..."
 	dracut -f
 	Print_Status "Initrd rebuilt."
+
+	# On BLS systems, also rebuild the EFI initrd
+	if rpm -q grub2-x86_64-efi-bls &>/dev/null; then
+		local KVER
+		KVER=$(uname -r)
+		local Vmlinuz="/usr/lib/modules/${KVER}/vmlinuz"
+
+		if [[ -f "$Vmlinuz" ]]; then
+			Print_Status "BLS detected. Rebuilding EFI initrd..."
+			kernel-install add "${KVER}" "$Vmlinuz"
+			Print_Status "EFI initrd rebuilt."
+		fi
+	fi
 }
 
 Verify_Installation()
@@ -186,7 +192,6 @@ Main()
 	Detect_GPU
 	Detect_Driver_Series
 	Check_Secure_Boot
-	Add_Hardware_Repo
 	Install_Driver
 	Blacklist_Nouveau
 	Setup_Hybrid_Graphics

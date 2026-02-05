@@ -1,36 +1,31 @@
 # NVIDIA GPU on openSUSE Tumbleweed
 
-Setup guide for NVIDIA GPUs on Tumbleweed laptops and desktops, including driver installation, hybrid graphics, and common update issues.
+Setup guide for NVIDIA GPUs on Tumbleweed laptops and desktops, including driver installation, hybrid graphics, and Secure Boot compatibility.
 
 ## Tested Hardware
 
 | GPU | Driver | Status |
 |-----|--------|--------|
-| RTX 3050 (Laptop) | nvidia-driver-G06 | Working |
+| RTX 3050 (Laptop) | nvidia-open-driver-G06-signed-kmp-default | Working |
+
+## Driver Series
+
+| Series | GPUs | Package |
+|--------|------|---------|
+| G07 | RTX 50xx (Blackwell+) | `nvidia-open-driver-G07-signed-kmp-default` |
+| G06 | GTX 10xx, 16xx, RTX 20xx/30xx/40xx | `nvidia-open-driver-G06-signed-kmp-default` |
+| G05 | GTX 600-900 series (Kepler/Maxwell) | `nvidia-open-driver-G05-signed-kmp-default` |
 
 ## 1. Driver Installation
 
-### Add NVIDIA Repository
-
-The official openSUSE hardware repo provides NVIDIA drivers:
+Drivers are in the main openSUSE Oss repository. No additional repos needed.
 
 ```bash
-sudo zypper addrepo --refresh \
-    https://download.opensuse.org/repositories/hardware/openSUSE_Tumbleweed/ \
-    hardware
-sudo zypper ref
-```
+# Modern GPUs (GTX 10xx, 16xx, RTX 20xx/30xx/40xx)
+sudo zypper install nvidia-open-driver-G06-signed-kmp-default nvidia-settings
 
-### Install Driver
-
-**Modern GPUs (GTX 10xx, 16xx, RTX series):**
-```bash
-sudo zypper install nvidia-driver-G06 nvidia-gl-G06
-```
-
-**Older GPUs (GTX 600-900 series):**
-```bash
-sudo zypper install nvidia-driver-G05 nvidia-gl-G05
+# Newest GPUs (RTX 50xx)
+sudo zypper install nvidia-open-driver-G07-signed-kmp-default nvidia-settings
 ```
 
 Reboot after installation.
@@ -41,38 +36,41 @@ Reboot after installation.
 nvidia-smi
 ```
 
-## 2. Hybrid Graphics (Laptop)
+## 2. Secure Boot
+
+The open-source signed drivers (`nvidia-open-driver-*-signed-kmp-default`) are compatible with Secure Boot. No need to disable it or enroll custom MOKs for the NVIDIA driver itself.
+
+After kernel updates, the system may prompt for MOK enrollment for other modules. The password is your **root password**.
+
+## 3. Hybrid Graphics (Laptop)
 
 For laptops with Intel/AMD integrated + NVIDIA discrete:
 
 ```bash
-sudo zypper install nvidia-prime
+sudo zypper install suse-prime
 ```
 
-Run GPU-intensive applications with:
+Switch GPUs:
+
+```bash
+sudo prime-select nvidia
+sudo prime-select intel
+```
+
+Run individual applications on the NVIDIA GPU:
 
 ```bash
 prime-run <application>
 ```
 
-## 3. Fix: Black Screen After Driver Install
-
-### Check Secure Boot
-
-NVIDIA drivers are unsigned on openSUSE. Secure boot will block them.
-
-```bash
-mokutil --sb-state
-```
-
-If enabled, disable secure boot in BIOS/UEFI settings.
+## 4. Fix: Black Screen After Driver Install
 
 ### Rebuild Kernel Modules
 
 If the driver installed but the module didn't build:
 
 ```bash
-sudo zypper install -f nvidia-driver-G06-kmp-default
+sudo zypper install -f nvidia-open-driver-G06-signed-kmp-default
 ```
 
 ### Blacklist Nouveau
@@ -90,16 +88,11 @@ echo "blacklist nouveau" | sudo tee /etc/modprobe.d/50-nvidia-default.conf
 sudo dracut -f
 ```
 
-## 4. MOK Enrollment After Updates
+On BLS systems, also rebuild the EFI initrd:
 
-After kernel or driver updates with Secure Boot enabled, the system may prompt to enroll a Machine Owner Key (MOK).
-
-1. Select **Enroll MOK**
-2. Select **Continue**
-3. Enter your **root password**
-4. Select **Reboot**
-
-This happens because updated kernel modules need to be trusted by Secure Boot. If you disabled Secure Boot for NVIDIA, you won't see this prompt.
+```bash
+sudo kernel-install add $(uname -r) /usr/lib/modules/$(uname -r)/vmlinuz
+```
 
 ## 5. Booting the Installer with NVIDIA
 
@@ -138,7 +131,6 @@ nvidia-settings --assign CurrentMetaMode="nvidia-auto-select +0+0 { ForceComposi
 NVIDIA on Wayland requires the DRM kernel modesetting module:
 
 ```bash
-# Add to /etc/modprobe.d/nvidia.conf
 echo "options nvidia-drm modeset=1" | sudo tee /etc/modprobe.d/nvidia-drm.conf
 sudo dracut -f
 ```
@@ -147,9 +139,9 @@ sudo dracut -f
 
 | Package | Purpose |
 |---------|---------|
-| `nvidia-driver-G06` | Kernel driver for modern GPUs |
-| `nvidia-gl-G06` | OpenGL libraries |
-| `nvidia-driver-G06-kmp-default` | Kernel module package |
+| `nvidia-open-driver-G06-signed-kmp-default` | Open-source signed kernel driver (GTX 10xx+, RTX) |
+| `nvidia-open-driver-G07-signed-kmp-default` | Open-source signed kernel driver (RTX 50xx) |
+| `nvidia-open-driver-G05-signed-kmp-default` | Open-source signed kernel driver (GTX 600-900) |
+| `nvidia-settings` | NVIDIA settings GUI |
 | `nvidia-compute-G06` | CUDA runtime |
-| `nvidia-prime` | Hybrid graphics switching |
-| `nvidia-driver-G05` | Driver for older GPUs |
+| `suse-prime` | Hybrid graphics switching |
