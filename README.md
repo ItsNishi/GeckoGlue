@@ -26,6 +26,7 @@ Tumbleweed's bleeding-edge rolling release ships newer libraries than many appli
 | 🎬 DaVinci Resolve | ✅ Working | GLib mismatch, Intel Arc OpenCL, VA-API |
 | 🖨️ Epson Printers | ✅ Working | Epson Scan 2 crash, IPP setup |
 | 🖥️ NVIDIA GPU | ✅ Working | Driver install, hybrid graphics, secure boot |
+| 🔒 ProtonVPN | GUI verified | Fedora 43 packages, Python 3.14 launchers; tunnel untested |
 | 🔧 System Updates | ✅ Working | Missing measure-pcr-prediction with LUKS + GRUB |
 
 ## 🚀 Quick Start
@@ -44,6 +45,7 @@ sudo ./scripts/fix-davinci-resolve.sh
 sudo ./scripts/fix-epson.sh
 sudo ./scripts/fix-nvidia.sh
 sudo ./scripts/fix-measure-pcr.sh
+sudo ./scripts/fix-protonvpn.sh
 ```
 
 ## 📜 Scripts
@@ -54,6 +56,7 @@ sudo ./scripts/fix-measure-pcr.sh
 | 🎬 `fix-davinci-resolve.sh` | GLib mismatch, GPU drivers (Intel/AMD/NVIDIA), OpenCL, VA-API |
 | 🖨️ `fix-epson.sh` | Epson Scan 2 crash (32-bit Qt5), IPP network printing |
 | 🖥️ `fix-nvidia.sh` | Open-source signed drivers (G05/G06/G07), Secure Boot, PRIME |
+| 🔒 `fix-protonvpn.sh` | Install/update Fedora 43 GUI packages with native Python 3.14 dependencies |
 | 🔧 `fix-measure-pcr.sh` | Boot halt from missing PCR predictions on GRUB + LUKS, EFI kernel management |
 
 ## 📖 Documentation
@@ -64,6 +67,7 @@ Detailed setup guides available in `docs/`:
 - 📄 [DaVinci Resolve Setup Guide](docs/DaVinci_Resolve_openSUSE_Setup.md)
 - 📄 [Epson Printer/Scanner Setup](docs/Epson_Printer_Scanner_Setup.md)
 - 📄 [NVIDIA GPU Setup](docs/NVIDIA_GPU_Setup.md)
+- 📄 [ProtonVPN Setup](docs/ProtonVPN_Setup.md)
 - [Proton VPN Update Guide](docs/ProtonVPN_Update.md)
 - 📄 [Fix: Missing measure-pcr-prediction](docs/Missing_Measure_PCR_Prediction.md)
 
@@ -157,6 +161,20 @@ Enable DRM kernel modesetting:
 echo "options nvidia-drm modeset=1" | sudo tee /etc/modprobe.d/nvidia-drm.conf
 sudo dracut -f
 ```
+</details>
+
+<details>
+<summary>🔒 ProtonVPN: Legacy client crashes / official app not available</summary>
+
+Install or update the official Fedora 43 GUI packages with Python 3.14 dependencies and launchers:
+
+```bash
+sudo ./scripts/fix-protonvpn.sh
+```
+
+The script checks imports and leaves Zypper's dependency solutions interactive. Run
+`./scripts/fix-protonvpn.sh --check` to verify the installation without changes.
+See the [ProtonVPN Setup Guide](docs/ProtonVPN_Setup.md) for dependency exceptions and launchers.
 </details>
 
 <details>

@@ -4,6 +4,11 @@ This procedure updated an existing Proton VPN installation from the Fedora 43 st
 on openSUSE Tumbleweed 20261103 on 2026-11-09. The installation uses Python 3.14 even though
 the system default `python3` is 3.13. This is an update checkpoint, not a fresh installation guide.
 
+The [installer](../scripts/fix-protonvpn.sh) now supports both installation and updates with
+native Python 3.14 dependencies and explicit GUI/daemon launchers. See
+[Proton VPN setup](ProtonVPN_Setup.md) for usage. The commands below preserve the original
+manual update checkpoint.
+
 ## Verified package versions
 
 | Package | Before | After |
