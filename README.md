@@ -64,6 +64,7 @@ Detailed setup guides available in `docs/`:
 - 📄 [DaVinci Resolve Setup Guide](docs/DaVinci_Resolve_openSUSE_Setup.md)
 - 📄 [Epson Printer/Scanner Setup](docs/Epson_Printer_Scanner_Setup.md)
 - 📄 [NVIDIA GPU Setup](docs/NVIDIA_GPU_Setup.md)
+- [Proton VPN Update Guide](docs/ProtonVPN_Update.md)
 - 📄 [Fix: Missing measure-pcr-prediction](docs/Missing_Measure_PCR_Prediction.md)
 
 ## 🔥 Common Issues & Quick Fixes
